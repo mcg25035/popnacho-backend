@@ -3,6 +3,16 @@ const Utils = require('./Utils');
 const Schema = Mongoose.Schema;
 
 
+/**
+ * @typedef {Object} UserModel
+ * @property {string} uid
+ * @property {string} username
+ * @property {string} transferId
+ * @property {string} googleLink
+ * @property {string} discordLink
+ * @property {string} loginToken
+ * @property {number} clickCount
+ */
 
 class DatabaseService{
     /** @type {Mongoose.Schema}*/
@@ -22,12 +32,14 @@ class DatabaseService{
     /** @private */
     constructor(){}
 
+    /** @returns {DatabaseService} */
     static async new() {
         var result = new DatabaseService();
         Mongoose.connect('mongodb://localhost:27017/', {directConnection: true});
         return result;
     }
 
+    /** @returns {UserModel} */
     async newUser() {
         var uid = Utils.randomUID();
         while (await this.userModel.exists({uid: uid})) {
@@ -44,18 +56,35 @@ class DatabaseService{
             clickCount: 0
         });
         await newUser.save();
-        return;
+        return newUser;
     }
 
+    async deleteUser(uid) {
+        if (!await this.userModel.exists({uid: uid})) {
+            throw new Error("User does not exist");
+        }
+        await this.userModel.deleteOne({uid: uid});
+    }
+
+    /** @returns {string} */
     async newTransferId(uid) {
         var transferId = Utils.randomUID() + Utils.randomUID();
         if (!await this.userModel.exists({uid: uid})) {
             throw new Error("User does not exist");
         }
         this.userModel.findByIdAndUpdate(uid, {transferId: transferId});
+        return transferId;
+    }
+
+    async resetTransferId(uid) {
+        if (!await this.userModel.exists({uid: uid})) {
+            throw new Error("User does not exist");
+        }
+        this.userModel.findByIdAndUpdate(uid, {transferId: ""});
         return;
     }
 
+    /** @returns {void} */
     async addClick(uid, count) {
         if (!await this.userModel.exists({uid: uid})) {
             throw new Error("User does not exist");
@@ -66,6 +95,7 @@ class DatabaseService{
         return;
     }
 
+    /** @returns {void} */
     async linkGoogle(uid, email) {
         if (!await this.userModel.exists({uid: uid})) {
             throw new Error("User does not exist");
@@ -74,6 +104,7 @@ class DatabaseService{
         return;
     }
 
+    /** @returns {void} */
     async linkDiscord(uid, discordId) {
         if (!await this.userModel.exists({uid: uid})) {
             throw new Error("User does not exist");
@@ -82,6 +113,7 @@ class DatabaseService{
         return
     }
 
+    /** @returns {string} */
     async updateToken(uid) {
         if (!await this.userModel.exists({uid: uid})) {
             throw new Error("User does not exist");
@@ -89,6 +121,22 @@ class DatabaseService{
         var token = Utils.randomUID() + Utils.randomUID();
         this.userModel.findByIdAndUpdate(uid, {loginToken: token});
         return token;
+    }
+
+    /** @returns {UserModel} */
+    async getUser(uid) {
+        if (!await this.userModel.exists({uid: uid})) {
+            throw new Error("User does not exist");
+        }
+        return await this.userModel.findOne({uid: uid});
+    }
+    
+    /** @returns {Boolean} */
+    async auth(uid, token) {
+        if (!await this.userModel.exists({uid: uid})) {
+            throw new Error("User does not exist");
+        }
+        return await this.userModel.exists({uid: uid, loginToken: token});
     }
 }
 
