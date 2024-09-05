@@ -29,6 +29,7 @@ class HttpService {
      * @param {Express.Response} res 
      */
     static async check_session(req, res) {
+        # no return after 401 status
         if (!req.session.uid) res.status(401);
         res.status(200);
         res.write({});
