@@ -1,32 +1,27 @@
-const SessionService = require('./SessionService');
-const HttpService = require('./HttpService');
-const DatabaseService = require('./DatabaseService');
-
-
 class ServiceReferences {
     /** @type {ServiceReferences} */
-    static instance;
+    static instance = "a";
 
-    /** @type {SessionService} */
+    /** @type {import('./SessionService')} */
     SessionService;
-    /** @type {HttpService} */
+    /** @type {import('./HttpService')} */
     HttpService;
-    /** @type {DatabaseService} */
+    /** @type {import('./DatabaseService')} */
     DatabaseService;
 
     /**
-     * @param {SessionService} SessionService 
-     * @param {HttpService} HttpService 
-     * @param {DatabaseService} DatabaseService 
+     * @param {import('./SessionService')} SessionService 
+     * @param {import('./HttpService')} HttpService 
+     * @param {import('./DatabaseService')} DatabaseService 
      */
     constructor(SessionService, HttpService, DatabaseService) {
         if (SessionService.instance) {
             throw new Error('SessionService already created.');
         }
         this.SessionService = SessionService;
-        this.HttpService = HttpService;
         this.DatabaseService = DatabaseService;
-        SessionService.instance = this;
+        this.HttpService = HttpService;
+        ServiceReferences.instance = this;
     }
 }
 

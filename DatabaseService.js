@@ -27,7 +27,7 @@ class DatabaseService{
     });
 
     /** @type {Mongoose.Model} */
-    userModel = Mongoose.model('User', userSchema);
+    userModel = Mongoose.model('User', this.userSchema);
 
     /** @private */
     constructor(){}
@@ -36,6 +36,7 @@ class DatabaseService{
     static async new() {
         var result = new DatabaseService();
         Mongoose.connect('mongodb://localhost:27017/', {directConnection: true});
+        console.log('[DatabaseService] Connected to MongoDB');
         return result;
     }
 
@@ -72,7 +73,7 @@ class DatabaseService{
         if (!await this.userModel.exists({uid: uid})) {
             throw new Error("User does not exist");
         }
-        this.userModel.findByIdAndUpdate(uid, {transferId: transferId});
+        await this.userModel.findOneAndUpdate({uid: uid}, {transferId: transferId});
         return transferId;
     }
 
@@ -80,7 +81,7 @@ class DatabaseService{
         if (!await this.userModel.exists({uid: uid})) {
             throw new Error("User does not exist");
         }
-        this.userModel.findByIdAndUpdate(uid, {transferId: ""});
+        await this.userModel.findOneAndUpdate({uid: uid}, {transferId: ""});
         return;
     }
 
@@ -100,7 +101,7 @@ class DatabaseService{
         if (!await this.userModel.exists({uid: uid})) {
             throw new Error("User does not exist");
         }
-        this.userModel.findByIdAndUpdate(uid, {googleLink: email});
+        await this.userModel.findOneAndUpdate({uid: uid}, {googleLink: email});
         return;
     }
 
@@ -109,7 +110,7 @@ class DatabaseService{
         if (!await this.userModel.exists({uid: uid})) {
             throw new Error("User does not exist");
         }
-        this.userModel.findByIdAndUpdate(uid, {discordLink: discordId});
+        await this.userModel.findOneAndUpdate({uid: uid}, {discordLink: discordId});
         return
     }
 
@@ -119,7 +120,7 @@ class DatabaseService{
             throw new Error("User does not exist");
         }
         var token = Utils.randomUID() + Utils.randomUID();
-        this.userModel.findByIdAndUpdate(uid, {loginToken: token});
+        await this.userModel.findOneAndUpdate({uid: uid}, {loginToken: token});
         return token;
     }
 

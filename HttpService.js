@@ -1,50 +1,60 @@
 const Express = require('express');
 const ExpressSession = require('express-session');
-const ServiceReferences = require('./ServiceReferences');
 const Utils = require('./Utils');
-
-
 
 class HttpService {
     /** @type {Express.Express} */
     app;
 
+    /** @private */
     constructor() {
         this.app = Express();
         this.app.use(ExpressSession({
             secret: Utils.randomUID(),
-            resave: false,
-            saveUninitialized: true,
-            cookie: {
-                secure: true
-            }
+            resave: true,
+            saveUninitialized: true
         }));
         this.app.use(Express.json());
+        this.app.post('/user', HttpService.new_user);
+        this.app.put('/user', HttpService.transfer_user);
+        this.app.put('/session', HttpService.auth_session);
+        this.app.get('/session', HttpService.check_session);
+        this.app.get('/transfer_id', HttpService.generate_transfer_id);
+
+        this.app.listen(8080);
+        console.log('[HttpService] Listening on port 8080');
     }
 
-
+    static async new() {
+        return new HttpService();
+    }
 
     /**
+     * @private
      * @param {Express.Request} req
      * @param {Express.Response} res 
      */
     static async check_session(req, res) {
-        # no return after 401 status
-        if (!req.session.uid) res.status(401);
+        if (!req.session.uid) {
+            res.status(401);
+            res.json({error: 'Not logged in.'});
+            return res.end();
+        }
         res.status(200);
-        res.write({});
+        res.json({});
         return res.end();
     }
 
     /**
+     * @private
      * @param {Express.Request} req
      * @param {Express.Response} res
      */
-    async new_user(req, res) {
+    static async new_user(req, res) {
         var dbService = ServiceReferences.instance.DatabaseService;
         var user = await dbService.newUser();
         req.session.uid = user.uid;
-        res.write({
+        res.json({
             uid: user.uid,
             loginToken: user.loginToken
         })
@@ -52,33 +62,41 @@ class HttpService {
     }
 
     /**
+     * @private
      * @param {Express.Request} req
      * @param {Express.Response} res
      */
-    async auth_session(req, res) {
+    static async auth_session(req, res) {
         var dbService = ServiceReferences.instance.DatabaseService
         var uid = req.body.uid;
         var loginToken = req.body.login_token;
         var user;
         try{
             user = await dbService.getUser(uid);
+            if (user.loginToken != loginToken) throw new Error('');
         }
         catch (e) {
             res.status(401);
-            res.write({error: 'Invalid login token.'});
+            res.json({error: 'Invalid login token.'});
             return res.end();
         }
         req.session.uid = user.uid;
         res.status(200);
-        res.write({})
+        res.json({})
         res.end();
     }
 
-    async generate_transfer_id(req, res) {
+    /**
+     * @private
+     * @param {Express.Request} req 
+     * @param {Express.Response} res 
+     * @returns 
+     */
+    static async generate_transfer_id(req, res) {
         var dbService = ServiceReferences.instance.DatabaseService;
         if (!req.session.uid) {
             res.status(401);
-            res.write({error: 'Not logged in.'});
+            res.json({error: 'Not logged in.'});
             return res.end();
         }
         var transferId;
@@ -87,37 +105,38 @@ class HttpService {
         }
         catch (e) {
             res.status(500);
-            res.write({error: "Invalid user."});
+            res.json({error: "Invalid user."});
             return res.end();
         }
         
-        res.write({transferId: transferId});
+        res.json({transfer_id: transferId});
         res.status(200);
     }
 
     /**
+     * @private
      * @param {Express.Request} req 
      * @param {Express.Response} res 
      */
-    async transfer_user(req, res) {
+    static async transfer_user(req, res) {
         var dbService = ServiceReferences.instance.DatabaseService;
-        var transferIdProvide = req.body.transferId;
+        var transferIdProvide = req.body.transfer_id;
         if (!transferIdProvide) {
             res.status(400);
-            res.write({error: 'No transfer ID provided.'});
+            res.json({error: 'No transfer ID provided.'});
             return res.end();
         }
         var uidProvide = req.body.uid;
         if (!uidProvide) {
             res.status(400);
-            res.write({error: 'No UID provided.'});
+            res.json({error: 'No UID provided.'});
             return res.end();
         }
 
         var uidNow = req.session.uid;
         if (uidNow && uidNow == uidProvide) {
             res.status(400);
-            res.write({error: 'Cannot transfer to self.'});
+            res.json({error: 'Cannot transfer to self.'});
             return res.end();
         }
 
@@ -128,7 +147,7 @@ class HttpService {
         }
         catch (e) {
             res.status(400);
-            res.write({error: 'Invalid user or transfer ID.'});
+            res.json({error: 'Invalid user or transfer ID.'});
             return res.end();
         }
         
@@ -141,15 +160,18 @@ class HttpService {
         }
         catch (e) {
             res.status(500);
-            res.write({error: 'Could not reset transfer ID.'});
+            res.json({error: 'Could not reset transfer ID.'});
             return res.end();
         }
         
         req.session.uid = uidProvide;
-        res.write({token: user.loginToken});
+        res.json({token: user.loginToken});
         res.status(200);
     }
 
     
         
 }
+
+module.exports = HttpService;
+const ServiceReferences = require('./ServiceReferences');
