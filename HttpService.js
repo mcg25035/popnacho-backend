@@ -169,6 +169,27 @@ class HttpService {
         res.status(200);
     }
 
+    static async add_click(req, res) {
+        var ssService = ServiceReferences.instance.SessionService;
+        var dbService = ServiceReferences.instance.DatabaseService;
+        var sessionId = req.session.id;
+        var countToAdd = req.body.count;
+        if (!countToAdd) {
+            res.status(400);
+            res.json({error: 'No count provided.'});
+            return res.end();
+        }
+
+        if (!ssService.isSesionInit(sessionId)) {
+            var userCountTotal = await dbService.getUserClicks(req.session.uid);
+            await ssService.initSession(sessionId, req.session.uid, userCountTotal);
+        }
+
+        await ssService.addClick(sessionId, countToAdd);
+
+        res.status(200);
+    }
+
     
         
 }
