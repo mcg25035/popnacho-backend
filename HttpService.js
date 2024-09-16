@@ -1,6 +1,8 @@
 const Express = require('express');
 const ExpressSession = require('express-session');
+const Cors = require('cors');
 const Utils = require('./Utils');
+
 
 class HttpService {
     /** @type {Express.Express} */
@@ -9,12 +11,16 @@ class HttpService {
     /** @private */
     constructor() {
         this.app = Express();
+        this.app.use(Express.json());
         this.app.use(ExpressSession({
             secret: Utils.randomUID(),
             resave: true,
             saveUninitialized: true
         }));
-        this.app.use(Express.json());
+        this.app.use(Cors({
+                origin: 'http://localhost:3000',
+                credentials: true
+        }))
         this.app.post('/user', HttpService.new_user);
         this.app.put('/user', HttpService.transfer_user);
         this.app.put('/session', HttpService.auth_session);
@@ -56,7 +62,7 @@ class HttpService {
         req.session.uid = user.uid;
         res.json({
             uid: user.uid,
-            loginToken: user.loginToken
+            login_token: user.loginToken
         })
         res.status(200);
     }
@@ -140,9 +146,8 @@ class HttpService {
             return res.end();
         }
 
-        var user;
         try {
-            user = await dbService.getUser(uidProvide);
+            var user = await dbService.getUser(uidProvide);
             if (user.transferId != transferIdProvide) throw new Error('');
         }
         catch (e) {
@@ -165,7 +170,11 @@ class HttpService {
         }
         
         req.session.uid = uidProvide;
-        res.json({token: user.loginToken});
+        var updatedToken = await dbService.updateToken(uidProvide);
+
+        
+
+        res.json({token: updatedToken});
         res.status(200);
     }
 
