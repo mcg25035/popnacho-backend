@@ -11,6 +11,7 @@ class SessionService {
     static async new() {
         var result = new SessionService();
         result.client = Redis.createClient();
+        result.client.connect();
         console.log('[SessionService] Connected to Redis');
         return result;
     }

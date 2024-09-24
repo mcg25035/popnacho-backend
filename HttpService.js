@@ -90,7 +90,7 @@ class HttpService {
             res.json({error: 'Invalid login token.'});
             return res.end();
         }
-        await sessionService.initSession(req.session.id, user.uid, user.clicks);
+        await sessionService.initSession(req.session.id, user.uid, user.clickCount);
         res.status(200);
         res.json({})
         res.end();
@@ -179,7 +179,7 @@ class HttpService {
         }
         
         
-        await sessionService.transferSession(req.session.id, user.uid, user.clicks);
+        await sessionService.transferSession(req.session.id, user.uid, user.clickCount);
         var updatedToken = await dbService.updateToken(uidToChange);
 
     
