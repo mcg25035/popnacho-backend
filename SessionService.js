@@ -47,6 +47,12 @@ class SessionService {
         return await this.client.GET(`uid:${uid}`);
     }
 
+    async getUidClicks(uid) {
+        if (!await this.isUserInit(uid)) throw new Error('User not initialized.');
+        var sessionId = await this.getUidSession(uid);
+        return await this.client.GET(`clicks:${sessionId}`);
+    }
+
     async getSessionUid(sessionId) {
         if (!await this.isSesionInit(sessionId)) throw new Error('Session not initialized.');
         return await this.client.GET(`session:${sessionId}`);

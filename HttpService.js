@@ -177,9 +177,16 @@ class HttpService {
             res.json({error: 'Could not reset transfer ID.'});
             return res.end();
         }
+
+        var clickToInit;
+        try{
+            clickToInit = await sessionService.getSessionClicks(req.session.id);
+        }
+        catch (e) {
+            clickToInit = user.clickCount;
+        }
         
-        
-        await sessionService.transferSession(req.session.id, user.uid, user.clickCount);
+        await sessionService.transferSession(req.session.id, user.uid, clickToInit);
         var updatedToken = await dbService.updateToken(uidToChange);
 
     
