@@ -41,7 +41,9 @@ class HttpService {
      * @param {Express.Response} res 
      */
     static async check_session(req, res) {
-        if (!req.session.uid) {
+        var sessionService = ServiceReferences.instance.SessionService;
+        var isSessionInit = await sessionService.isSesionInit(req.session.id);
+        if (!isSessionInit) {
             res.status(401);
             res.json({error: 'Not logged in.'});
             return res.end();
@@ -58,8 +60,9 @@ class HttpService {
      */
     static async new_user(req, res) {
         var dbService = ServiceReferences.instance.DatabaseService;
+        var sessionService = ServiceReferences.instance.SessionService;
         var user = await dbService.newUser();
-        req.session.uid = user.uid;
+        await sessionService.initSession(req.session.id, user.uid, user.clickCount);
         res.json({
             uid: user.uid,
             login_token: user.loginToken
@@ -74,6 +77,7 @@ class HttpService {
      */
     static async auth_session(req, res) {
         var dbService = ServiceReferences.instance.DatabaseService
+        var sessionService = ServiceReferences.instance.SessionService;
         var uid = req.body.uid;
         var loginToken = req.body.login_token;
         var user;
@@ -86,7 +90,7 @@ class HttpService {
             res.json({error: 'Invalid login token.'});
             return res.end();
         }
-        req.session.uid = user.uid;
+        await sessionService.initSession(req.session.id, user.uid, user.clicks);
         res.status(200);
         res.json({})
         res.end();
@@ -100,14 +104,18 @@ class HttpService {
      */
     static async generate_transfer_id(req, res) {
         var dbService = ServiceReferences.instance.DatabaseService;
-        if (!req.session.uid) {
+        var sessionService = ServiceReferences.instance.SessionService;
+        var isSesionInit = await sessionService.isSesionInit(req.session.id);
+        if (!isSesionInit) {
             res.status(401);
             res.json({error: 'Not logged in.'});
             return res.end();
         }
+        var uid = await sessionService.getSessionUid(req.session.id);
+
         var transferId;
         try{
-            transferId = await dbService.newTransferId(req.session.uid);
+            transferId = await dbService.newTransferId(uid);
         }
         catch (e) {
             res.status(500);
@@ -126,29 +134,33 @@ class HttpService {
      */
     static async transfer_user(req, res) {
         var dbService = ServiceReferences.instance.DatabaseService;
-        var transferIdProvide = req.body.transfer_id;
-        if (!transferIdProvide) {
+        var sessionService = ServiceReferences.instance.SessionService;
+
+        var transferId = req.body.transfer_id;
+        if (!transferId) {
             res.status(400);
             res.json({error: 'No transfer ID provided.'});
             return res.end();
         }
-        var uidProvide = req.body.uid;
-        if (!uidProvide) {
+
+        var uidToChange = req.body.uid;
+        if (!uidToChange) {
             res.status(400);
             res.json({error: 'No UID provided.'});
             return res.end();
         }
 
-        var uidNow = req.session.uid;
-        if (uidNow && uidNow == uidProvide) {
+        var uidCurrent = await sessionService.getSessionUid(req.session.id);
+        if (uidCurrent && uidCurrent == uidToChange) {
             res.status(400);
             res.json({error: 'Cannot transfer to self.'});
             return res.end();
         }
 
+        var user;
         try {
-            var user = await dbService.getUser(uidProvide);
-            if (user.transferId != transferIdProvide) throw new Error('');
+            user = await dbService.getUser(uidToChange);
+            if (user.transferId != transferId) throw new Error('');
         }
         catch (e) {
             res.status(400);
@@ -156,12 +168,9 @@ class HttpService {
             return res.end();
         }
         
-        if (uidNow) {
-            await dbService.deleteUser(uidNow);
-        }
-        
+        if (uidCurrent) await dbService.deleteUser(uidCurrent);
         try{
-            dbService.resetTransferId(uidProvide);
+            await dbService.resetTransferId(uidToChange);
         }
         catch (e) {
             res.status(500);
@@ -169,17 +178,17 @@ class HttpService {
             return res.end();
         }
         
-        req.session.uid = uidProvide;
-        var updatedToken = await dbService.updateToken(uidProvide);
-
         
+        await sessionService.transferSession(req.session.id, user.uid, user.clicks);
+        var updatedToken = await dbService.updateToken(uidToChange);
 
+    
         res.json({token: updatedToken});
         res.status(200);
     }
 
     static async add_click(req, res) {
-        var ssService = ServiceReferences.instance.SessionService;
+        var sessionService = ServiceReferences.instance.SessionService;
         var dbService = ServiceReferences.instance.DatabaseService;
         var sessionId = req.session.id;
         var countToAdd = req.body.count;
@@ -189,12 +198,13 @@ class HttpService {
             return res.end();
         }
 
-        if (!ssService.isSesionInit(sessionId)) {
-            var userCountTotal = await dbService.getUserClicks(req.session.uid);
-            await ssService.initSession(sessionId, req.session.uid, userCountTotal);
+        if (!await sessionService.isSesionInit(sessionId)) {
+            res.status(401);
+            res.json({error: 'Not logged in.'});
+            return res.end();
         }
 
-        await ssService.addClick(sessionId, countToAdd);
+        await sessionService.addClick(sessionId, countToAdd);
 
         res.status(200);
     }

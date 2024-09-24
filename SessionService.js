@@ -18,10 +18,32 @@ class SessionService {
     async isSesionInit(sessionId) {
         return await this.client.EXISTS(`session:${sessionId}`);
     }
+
+    async isUserInit(uid) {
+        return await this.client.EXISTS(`uid:${uid}`);
+    }
     
     async initSession(sessionId, uid, count) {
         await this.client.SET(`session:${sessionId}`, uid);
         await this.client.SET(`clicks:${sessionId}`, count);
+        await this.client.SET(`uid:${uid}`, sessionId);
+    }
+
+    async transferSession(sessionId, newUid, newCount) {
+        try{
+            var oldSession = await this.client.GET(`uid:${newUid}`);
+            await this.client.DEL(`session:${oldSession}`);
+            await this.client.DEL(`clicks:${oldSession}`);
+        }
+        catch(ignored){}
+        await this.client.SET(`session:${sessionId}`, newUid);
+        await this.client.SET(`clicks:${sessionId}`, newCount);
+        await this.client.SET(`uid:${newUid}`, sessionId);
+    }
+
+    async getUidSession(uid) {
+        if (!await this.isUserInit(uid)) throw new Error('User not initialized.');
+        return await this.client.GET(`uid:${uid}`);
     }
 
     async getSessionUid(sessionId) {
