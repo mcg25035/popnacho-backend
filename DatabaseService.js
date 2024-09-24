@@ -1,5 +1,5 @@
 const Mongoose = require('mongoose');
-const StringUtils = require('./StringUtils');
+const Utils = require('./Utils');
 const Schema = Mongoose.Schema;
 
 
@@ -42,11 +42,11 @@ class DatabaseService{
 
     /** @returns {UserModel} */
     async newUser() {
-        var uid = StringUtils.randomUID();
+        var uid = Utils.randomUID();
         while (await this.userModel.exists({uid: uid})) {
-            uid = StringUtils.randomUID();
+            uid = Utils.randomUID();
         }
-        var loginToken = StringUtils.randomUID() + StringUtils.randomUID();
+        var loginToken = Utils.randomUID() + Utils.randomUID();
         var newUser = new this.userModel({
             uid: uid,
             username: "guest",
@@ -69,7 +69,7 @@ class DatabaseService{
 
     /** @returns {string} */
     async newTransferId(uid) {
-        var transferId = StringUtils.randomUID() + StringUtils.randomUID();
+        var transferId = Utils.randomUID() + Utils.randomUID();
         if (!await this.userModel.exists({uid: uid})) {
             throw new Error("User does not exist");
         }
@@ -119,7 +119,7 @@ class DatabaseService{
         if (!await this.userModel.exists({uid: uid})) {
             throw new Error("User does not exist");
         }
-        var token = StringUtils.randomUID() + StringUtils.randomUID();
+        var token = Utils.randomUID() + Utils.randomUID();
         await this.userModel.findOneAndUpdate({uid: uid}, {loginToken: token});
         return token;
     }

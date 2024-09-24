@@ -1,4 +1,4 @@
-class StringUtils {
+class Utils {
     static randomUID() {
         var chars = "abcdef0123456789";
         var result = "";
@@ -9,4 +9,4 @@ class StringUtils {
     }
 }
 
-module.exports = StringUtils;
+module.exports = Utils;
