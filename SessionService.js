@@ -1,5 +1,5 @@
 const Redis = require('redis');
-const Utils = require('./Utils');
+const StringUtils = require('./StringUtils');
 
 class SessionService {
     /** @type {Redis.RedisClientType} */
@@ -11,6 +11,7 @@ class SessionService {
     static async new() {
         var result = new SessionService();
         result.client = Redis.createClient();
+        await result.client.connect();
         console.log('[SessionService] Connected to Redis');
         return result;
     }
@@ -44,6 +45,12 @@ class SessionService {
     async getUidSession(uid) {
         if (!await this.isUserInit(uid)) throw new Error('User not initialized.');
         return await this.client.GET(`uid:${uid}`);
+    }
+
+    async getUidClicks(uid) {
+        if (!await this.isUserInit(uid)) throw new Error('User not initialized.');
+        var sessionId = await this.getUidSession(uid);
+        return await this.client.GET(`clicks:${sessionId}`);
     }
 
     async getSessionUid(sessionId) {

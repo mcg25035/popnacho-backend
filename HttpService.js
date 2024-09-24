@@ -1,7 +1,7 @@
 const Express = require('express');
 const ExpressSession = require('express-session');
 const Cors = require('cors');
-const Utils = require('./Utils');
+const StringUtils = require('./StringUtils');
 
 
 class HttpService {
@@ -13,7 +13,7 @@ class HttpService {
         this.app = Express();
         this.app.use(Express.json());
         this.app.use(ExpressSession({
-            secret: Utils.randomUID(),
+            secret: StringUtils.randomUID(),
             resave: true,
             saveUninitialized: true
         }));
@@ -41,16 +41,10 @@ class HttpService {
      * @param {Express.Response} res 
      */
     static async check_session(req, res) {
-        var sessionService = ServiceReferences.instance.SessionService;
-        var isSessionInit = await sessionService.isSesionInit(req.session.id);
-        if (!isSessionInit) {
-            res.status(401);
-            res.json({error: 'Not logged in.'});
-            return res.end();
-        }
-        res.status(200);
-        res.json({});
-        return res.end();
+        var loginCheckPassed = await HttpUtils.checkLoginOrRejectSession(req, res);
+        if (!loginCheckPassed) return;
+
+        HttpUtils.end(res, 200, {});
     }
 
     /**
@@ -60,14 +54,15 @@ class HttpService {
      */
     static async new_user(req, res) {
         var dbService = ServiceReferences.instance.DatabaseService;
-        var sessionService = ServiceReferences.instance.SessionService;
         var user = await dbService.newUser();
+
+        var sessionService = ServiceReferences.instance.SessionService;
         await sessionService.initSession(req.session.id, user.uid, user.clickCount);
-        res.json({
+        
+        HttpUtils.end(res, 200, {
             uid: user.uid,
             login_token: user.loginToken
-        })
-        res.status(200);
+        });
     }
 
     /**
@@ -76,24 +71,13 @@ class HttpService {
      * @param {Express.Response} res
      */
     static async auth_session(req, res) {
-        var dbService = ServiceReferences.instance.DatabaseService
+        var user = await HttpUtils.authUserOrRejectDB(req, res, req.body.login_token);
+        if (!user) return;
+
         var sessionService = ServiceReferences.instance.SessionService;
-        var uid = req.body.uid;
-        var loginToken = req.body.login_token;
-        var user;
-        try{
-            user = await dbService.getUser(uid);
-            if (user.loginToken != loginToken) throw new Error('');
-        }
-        catch (e) {
-            res.status(401);
-            res.json({error: 'Invalid login token.'});
-            return res.end();
-        }
-        await sessionService.initSession(req.session.id, user.uid, user.clicks);
-        res.status(200);
-        res.json({})
-        res.end();
+        await sessionService.initSession(req.session.id, user.uid, user.clickCount);
+
+        HttpUtils.end(res, 200, {});
     }
 
     /**
@@ -103,28 +87,14 @@ class HttpService {
      * @returns 
      */
     static async generate_transfer_id(req, res) {
-        var dbService = ServiceReferences.instance.DatabaseService;
-        var sessionService = ServiceReferences.instance.SessionService;
-        var isSesionInit = await sessionService.isSesionInit(req.session.id);
-        if (!isSesionInit) {
-            res.status(401);
-            res.json({error: 'Not logged in.'});
-            return res.end();
-        }
-        var uid = await sessionService.getSessionUid(req.session.id);
+    
+        var loginCheckPassed = await HttpUtils.checkLoginOrRejectSession(req, res);
+        if (!loginCheckPassed) return;
 
-        var transferId;
-        try{
-            transferId = await dbService.newTransferId(uid);
-        }
-        catch (e) {
-            res.status(500);
-            res.json({error: "Invalid user."});
-            return res.end();
-        }
+        var transferId = await HttpUtils.generateTransferIdOrRejectDB(req, res);
+        if (!transferId) return;
         
-        res.json({transfer_id: transferId});
-        res.status(200);
+        HttpUtils.end(res, 200, {transfer_id: transferId});
     }
 
     /**
@@ -136,37 +106,19 @@ class HttpService {
         var dbService = ServiceReferences.instance.DatabaseService;
         var sessionService = ServiceReferences.instance.SessionService;
 
-        var transferId = req.body.transfer_id;
-        if (!transferId) {
-            res.status(400);
-            res.json({error: 'No transfer ID provided.'});
-            return res.end();
-        }
+        var transferId = HttpUtils.requireBodyTransferId(req, res);
+        if (!transferId) return;
 
-        var uidToChange = req.body.uid;
-        if (!uidToChange) {
-            res.status(400);
-            res.json({error: 'No UID provided.'});
-            return res.end();
-        }
+        var uidToChange = HttpUtils.requireBodyUidToChange(req, res);
+        if (!uidToChange) return;
 
         var uidCurrent = await sessionService.getSessionUid(req.session.id);
         if (uidCurrent && uidCurrent == uidToChange) {
-            res.status(400);
-            res.json({error: 'Cannot transfer to self.'});
-            return res.end();
+            return HttpUtils.end(res, 400, {error: 'Cannot transfer to self.'});
         }
 
-        var user;
-        try {
-            user = await dbService.getUser(uidToChange);
-            if (user.transferId != transferId) throw new Error('');
-        }
-        catch (e) {
-            res.status(400);
-            res.json({error: 'Invalid user or transfer ID.'});
-            return res.end();
-        }
+        var user = HttpUtils.getUserOrRejectDB(req, res);
+        if (!user) return;
         
         if (uidCurrent) await dbService.deleteUser(uidCurrent);
         try{
@@ -178,8 +130,7 @@ class HttpService {
             return res.end();
         }
         
-        
-        await sessionService.transferSession(req.session.id, user.uid, user.clicks);
+        await sessionService.transferSession(req.session.id, user.uid, user.clickCount);
         var updatedToken = await dbService.updateToken(uidToChange);
 
     
@@ -189,7 +140,7 @@ class HttpService {
 
     static async add_click(req, res) {
         var sessionService = ServiceReferences.instance.SessionService;
-        var dbService = ServiceReferences.instance.DatabaseService;
+        // var dbService = ServiceReferences.instance.DatabaseService;
         var sessionId = req.session.id;
         var countToAdd = req.body.count;
         if (!countToAdd) {
@@ -215,3 +166,4 @@ class HttpService {
 
 module.exports = HttpService;
 const ServiceReferences = require('./ServiceReferences');
+const HttpUtils = require('./HttpUtils');
