@@ -27,6 +27,7 @@ class HttpService {
         this.app.get('/session', HttpService.check_session);
         this.app.get('/transfer_id', HttpService.generate_transfer_id);
         this.app.get('/click', HttpService.get_click);
+        this.app.put('/click', HttpService.add_click);
 
         this.app.listen(8080);
         console.log('[HttpService] Listening on port 8080');
@@ -209,20 +210,19 @@ class HttpService {
         var sessionId = req.session.id;
         var countToAdd = req.body.count;
         if (!countToAdd) {
-            res.status(400);
-            res.json({error: 'No count provided.'});
-            return res.end();
+            return HttpService.endAndSend(res, 400, {error: 'No count provided.'});
         }
 
         if (!await sessionService.isSesionInit(sessionId)) {
-            res.status(401);
-            res.json({error: 'Not logged in.'});
-            return res.end();
+            return HttpService.endAndSend(res, 401, {error: 'Not logged in.'});
         }
 
         await sessionService.addClick(sessionId, countToAdd);
+        var uid = await sessionService.getSessionUid(sessionId);
+        var clickCount = await sessionService.getSessionClicks(sessionId);
+        dbService.setClick(uid, clickCount);
 
-        res.status(200);
+        return HttpService.endAndSend(res, 200, {clicks: clickCount});
     }
 
     

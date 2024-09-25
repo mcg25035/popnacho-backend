@@ -86,12 +86,12 @@ class DatabaseService{
     }
 
     /** @returns {void} */
-    async addClick(uid, count) {
+    async setClick(uid, count) {
         if (!await this.userModel.exists({uid: uid})) {
             throw new Error("User does not exist");
         }
         var user = await this.userModel.findOne({uid: uid});
-        user.clickCount+=count;
+        user.clickCount=count;
         user.save();
         return;
     }
