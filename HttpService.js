@@ -8,9 +8,16 @@ class HttpService {
     /** @type {Express.Express} */
     app;
 
-    static async expressListenPromisify(app, port) {
+    /**
+     * 
+     * @param {Express.Express} app
+     * @param {number} port
+     * @param {string} address
+     * @returns {Promise<void>}
+     */
+    static async expressListenPromisify(app, port, address) {
         return new Promise((resolve, reject) => {
-            app.listen(port, (err) => {
+            app.listen(port, address, (err) => {
                 if (err) return reject(err);
                 resolve();
             });
@@ -41,6 +48,7 @@ class HttpService {
     }
 
     static async new() {
+        var address = process.env.ADDRESS || 'localhost';
         var port = process.env.PORT || 8080;
         var result = new HttpService();
         await HttpService.expressListenPromisify(result.app, port);
