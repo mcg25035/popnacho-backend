@@ -33,6 +33,7 @@ class HttpService {
             resave: true,
             saveUninitialized: true,
             cookie: {
+                secure: true,
                 sameSite: 'none'
             }
         }));
