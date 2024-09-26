@@ -32,10 +32,6 @@ class HttpService {
             secret: Utils.randomUID(),
             resave: true,
             saveUninitialized: true,
-            cookie: {
-                secure: true,
-                sameSite: 'none'
-            }
         }));
         this.app.use(Cors({
                 origin: 'http://localhost:3000',
