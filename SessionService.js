@@ -17,7 +17,7 @@ class SessionService {
             redisConfig.password = redisPwd;
         }
         result.client = Redis.createClient(redisConfig);
-        result.client.connect();
+        await result.client.connect();
         console.log('[SessionService] Connected to Redis');
         return result;
     }

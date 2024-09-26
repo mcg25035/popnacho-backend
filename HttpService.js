@@ -48,11 +48,11 @@ class HttpService {
     }
 
     static async new() {
-        var address = process.env.ADDRESS || 'localhost';
-        var port = process.env.PORT || 8080;
+        var address = dotenv.config().parsed.addr || 'localhost';
+        var port = dotenv.config().parsed.port || 8080;
         var result = new HttpService();
-        await HttpService.expressListenPromisify(result.app, port);
-        console.log(`[HttpService] Listening on port ${port}`);
+        await HttpService.expressListenPromisify(result.app, port, address);
+        console.log(`[HttpService] Listening on port ${address}:${port}`);
     }
 
     /**

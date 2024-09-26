@@ -35,7 +35,7 @@ class DatabaseService{
     /** @returns {DatabaseService} */
     static async new() {
         var result = new DatabaseService();
-        Mongoose.connect('mongodb://localhost:27017/', {directConnection: true});
+        await Mongoose.connect('mongodb://localhost:27017/', {directConnection: true});
         console.log('[DatabaseService] Connected to MongoDB');
         return result;
     }
