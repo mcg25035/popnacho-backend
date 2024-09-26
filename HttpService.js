@@ -34,7 +34,7 @@ class HttpService {
             saveUninitialized: true,
         }));
         this.app.use(Cors({
-                origin: 'http://localhost:3000',
+                origin: 'https://popnacho.mcloudtw.com',
                 credentials: true
         }))
         this.app.post('/user', HttpService.new_user);
