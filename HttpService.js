@@ -2,11 +2,20 @@ const Express = require('express');
 const ExpressSession = require('express-session');
 const Cors = require('cors');
 const Utils = require('./Utils');
-
+const dotenv = require('dotenv');
 
 class HttpService {
     /** @type {Express.Express} */
     app;
+
+    static async expressListenPromisify(app, port) {
+        return new Promise((resolve, reject) => {
+            app.listen(port, (err) => {
+                if (err) return reject(err);
+                resolve();
+            });
+        });
+    }
 
     /** @private */
     constructor() {
@@ -29,12 +38,13 @@ class HttpService {
         this.app.get('/click', HttpService.get_click);
         this.app.put('/click', HttpService.add_click);
 
-        this.app.listen(8080);
-        console.log('[HttpService] Listening on port 8080');
     }
 
     static async new() {
-        return new HttpService();
+        var port = process.env.PORT || 8080;
+        var result = new HttpService();
+        await HttpService.expressListenPromisify(result.app, port);
+        console.log(`[HttpService] Listening on port ${port}`);
     }
 
     /**
