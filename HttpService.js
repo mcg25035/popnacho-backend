@@ -35,8 +35,8 @@ class HttpService {
         }));
         this.app.use(Cors({
                 origin: [
-                    'localhost:3000',
-                    'popnacho.mcloudtw.com'
+                    'http://localhost:3000',
+                    'https://popnacho.mcloudtw.com'
                 ],
                 credentials: true
         }))
