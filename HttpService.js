@@ -31,13 +31,13 @@ class HttpService {
         this.app.use(ExpressSession({
             secret: Utils.randomUID(),
             resave: true,
-            saveUninitialized: true
+            saveUninitialized: true,
+            cookie: {
+                sameSite: 'none'
+            }
         }));
         this.app.use(Cors({
-                origin: [
-                    'http://localhost:3000',
-                    'https://popnacho.mcloudtw.com'
-                ],
+                origin: 'http://localhost:3000',
                 credentials: true
         }))
         this.app.post('/user', HttpService.new_user);
