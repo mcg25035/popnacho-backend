@@ -44,6 +44,9 @@ class HttpService {
         this.app.get('/transfer_id', HttpService.generate_transfer_id);
         this.app.get('/click', HttpService.get_click);
         this.app.put('/click', HttpService.add_click);
+        this.app.post('/google-login', HttpService.google_login);
+        this.app.post('/discord-login', HttpService.discord_login);
+
 
     }
 
@@ -243,7 +246,31 @@ class HttpService {
         return HttpService.endAndSend(res, 200, {clicks: clickCount});
     }
 
-    
+    static async google_login(req, res) {
+        const sessionService = ServiceReferences.instance.SessionService;
+        const dbService = ServiceReferences.instance.DatabaseService;
+        const googleAuthResult = await dbService.googleLogin(req.body); 
+        if (googleAuthResult.success) {
+            await sessionService.initSession(req.session.id, googleAuthResult.uid, 0);
+            HttpService.endAndSend(res, 200, { isAuthenticated: true, uid: googleAuthResult.uid });
+        } 
+        else {
+            HttpService.endAndSend(res, 401, { error: googleAuthResult.error });
+        }
+    }
+
+    static async discord_login(req, res) {
+        const sessionService = ServiceReferences.instance.SessionService;
+        const dbService = ServiceReferences.instance.DatabaseService;
+        const discordAuthResult = await dbService.discordLogin(req.body); // Replace with actual OAuth logic later
+        if (discordAuthResult.success) {
+            await sessionService.initSession(req.session.id, discordAuthResult.uid, 0);
+            HttpService.endAndSend(res, 200, { isAuthenticated: true, uid: discordAuthResult.uid });
+        } 
+        else {
+            HttpService.endAndSend(res, 401, { error: discordAuthResult.error });
+        }
+    }
         
 }
 
