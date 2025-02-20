@@ -1,6 +1,8 @@
 const Express = require('express');
+const expressWs = require('express-ws');
 const ExpressSession = require('express-session');
 const Cors = require('cors');
+expressWs(this.app);
 const Utils = require('./Utils');
 const dotenv = require('dotenv');
 
@@ -43,7 +45,7 @@ class HttpService {
         this.app.get('/session', HttpService.check_session);
         this.app.get('/transfer_id', HttpService.generate_transfer_id);
         this.app.get('/click', HttpService.get_click);
-        this.app.put('/click', HttpService.add_click);
+        this.app.ws('/click', HttpService.add_click);
         this.app.post('/google-login', HttpService.google_login);
         this.app.post('/discord-login', HttpService.discord_login);
 
@@ -222,28 +224,41 @@ class HttpService {
 
     /**
      * @private
+    /**
+     * @private
+     * @param {WebSocket} ws
      * @param {Express.Request} req
-     * @param {Express.Response} res
      */
-    static async add_click(req, res) {
+    static async add_click(ws, req) {
         var sessionService = ServiceReferences.instance.SessionService;
         var dbService = ServiceReferences.instance.DatabaseService;
         var sessionId = req.session.id;
-        var countToAdd = req.body.count;
-        if (!countToAdd) {
-            return HttpService.endAndSend(res, 400, {error: 'No count provided.'});
-        }
 
         if (!await sessionService.isSesionInit(sessionId)) {
-            return HttpService.endAndSend(res, 401, {error: 'Not logged in.'});
+            ws.send(JSON.stringify({error: 'Not logged in.'}));
+            return;
         }
 
-        await sessionService.addClick(sessionId, countToAdd);
-        var uid = await sessionService.getSessionUid(sessionId);
-        var clickCount = await sessionService.getSessionClicks(sessionId);
-        dbService.setClick(uid, clickCount);
+        ws.on('message', async (msg) => {
+            try {
+                const data = JSON.parse(msg);
+                const countToAdd = data.count;
 
-        return HttpService.endAndSend(res, 200, {clicks: clickCount});
+                if (!countToAdd) {
+                    ws.send(JSON.stringify({error: 'No count provided.'}));
+                    return;
+                }
+
+                await sessionService.addClick(sessionId, countToAdd);
+                var uid = await sessionService.getSessionUid(sessionId);
+                var clickCount = await sessionService.getSessionClicks(sessionId);
+                dbService.setClick(uid, clickCount);
+
+                ws.send(JSON.stringify({clicks: clickCount}));
+            } catch (e) {
+                ws.send(JSON.stringify({error: 'Invalid message format.'}));
+            }
+        });
     }
 
     static async google_login(req, res) {
