@@ -1,0 +1,5 @@
+node_modules
+COMMIT_MESSAGE.txt
+DEVELOPMENT_SUMMARY.txt
+.env
+/test/package-lock.json
