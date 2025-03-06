@@ -1,0 +1,19 @@
+{
+  "name": "popnacho-stress-test",
+  "version": "1.0.0",
+  "description": "Stress test for popnacho backend",
+  "main": "stress.js",
+  "scripts": {
+    "start": "node stress.js",
+    "test": "node functional.js"
+  },
+  "dependencies": {
+    "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {
+    "assert": "^2.1.0"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
