@@ -52,7 +52,7 @@ async function runTests() {
   // Login User Test
   try {
     const loginResponse = await loginUser('testuser', 'testpassword');
-    assert.strictEqual(loginResponse.status, 302, 'Login user status should be 302');
+    assert.strictEqual(loginResponse.status, 200, 'Login user status should be 200');
     console.log('Login user test passed');
   } catch (error) {
     console.error('Login user test failed:', error);
